@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: GPL-3.0
+
+// exact version
+pragma solidity >=0.8.2 <0.9.0;
+
+contract HomeRepairService {
+    //use mapping(id => specific data)
+    // payable can be used
+    address payable owner = payable(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4);
+    address payable client = payable(msg.sender);
+    uint256 public IDStorage;
+
+    mapping(uint256 => address) requestOwner;
+    mapping(uint256 => uint256) toPay;
+    mapping(uint256 => bool) isPaid ;
+    mapping (address => bool)public isAuditor;
+    mapping(uint256 => mapping(address => bool)) isConfirmed ;
+
+    string public userName;
+    mapping(address => uint256) public shares;
+    mapping(uint256 => bool) public verify;
+
+    uint256 ethereumAmount;
+    uint256 public valueEth;
+    uint256 countOfAuditors = 0;
+
+    function addRepairRequest(uint256 ID, string memory description) public {
+        requestOwner[ID] = msg.sender;
+    }
+
+    function approveRequest(uint256 ID, uint256 amount) public {
+        if (msg.sender != owner) {
+            revert();
+        }
+
+        if (requestOwner[ID] != address(0)) {
+             revert("Not valid request");   
+        }
+
+        toPay[ID] = amount;
+    }
+
+    function pay(uint256 ID) public payable{
+        require(toPay[ID] != 0, "Not approved" );
+        require(msg.value == toPay[ID]);
+        isPaid[ID] = true;
+    }
+    function confirm(uint256 ID) public{
+        require(isAuditor[msg.sender], "Not auditor" );
+        require(isPaid[ID] == true, "Not paid");
+        verify[ID] = true;
+
+        require(isConfirmed[ID][msg.sender] == false );
+
+        countOfAuditors ++;
+         if (countOfAuditors > 2){
+                executeRepairRequest();
+         }
+    }
+
+    function executeRepairRequest() public payable {
+        require(countOfAuditors >= 2, "You cannot transfer coins!");
+        owner.transfer(ethereumAmount);
+    }
+
+    function moneyBack() public payable {
+        client.transfer(ethereumAmount);
+    }
+}
